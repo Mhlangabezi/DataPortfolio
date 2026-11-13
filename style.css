@@ -252,3 +252,20 @@ textarea.in { min-height: 220px; resize: vertical; font-family: var(--f-mono); f
 .built .chip { font-size: 13px; padding: 6px 11px; }
 .resume { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 24px; padding: 20px 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
 .resume p { color: var(--muted); flex: 1 1 280px; min-width: 0; }
+
+
+/* ---------- introduction ---------- */
+.intro { display: grid; gap: 16px; max-width: 64ch; }
+.intro p { color: var(--muted); font-size: 18px; }
+.intro p:first-child { color: var(--fg); font-size: 21px; line-height: 1.5; }
+.intro p.kicker { color: var(--fg); font-family: var(--f-display); font-weight: 500; font-size: 22px; line-height: 1.35; letter-spacing: -0.01em; }
+
+/* blog heading in the accent colour so it reads as the tagline, not a second section title */
+#blog .head h2 { color: var(--accent); }
+
+/* introduction: even, justified lines on wider screens; left aligned on phones where narrow lines would leave gaps */
+@media (min-width: 700px) {
+  .intro { max-width: 88ch; }
+  .intro p { text-align: justify; text-justify: inter-word; hyphens: auto; -webkit-hyphens: auto; text-wrap: pretty; }
+  .intro p.kicker { text-align: left; hyphens: manual; }
+}
