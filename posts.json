@@ -1,19 +1,5 @@
 [
   {
-    "id": "testing-the-toolkit-image",
-    "date": "2026-11-13",
-    "title": "Testing the toolkit image",
-    "body": "Circana Toolkit",
-    "links": [],
-    "images": [
-      {
-        "src": "images/testing-the-toolkit-image-1-sfmu.png",
-        "alt": "Toolkit on the ribbon",
-        "caption": ""
-      }
-    ]
-  },
-  {
     "id": "automate-first",
     "date": "2026-10-01",
     "title": "More Than Just Data",
