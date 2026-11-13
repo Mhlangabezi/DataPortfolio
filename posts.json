@@ -1,0 +1,29 @@
+[
+  {
+    "id": "automate-first",
+    "date": "2026-10-01",
+    "title": "Automate the boring report before you analyse it",
+    "body": "Every recurring report has a quiet tax: the same copy, paste and check, repeated until someone makes a mistake. I try to pay that tax down before I touch the analysis.\n\n## Start with the repeat offenders\n\nList the steps you did last time. Anything you did twice in the same way is a candidate. In Excel that is often a short VBA macro. In a larger flow it is a scheduled script or an ETL step.\n\n## Keep a check you can read\n\nAutomation without a check just makes errors faster. I add a small reconciliation, such as row counts in and out, so a broken run is obvious on the first look.",
+    "links": [],
+    "images": [],
+    "sample": true
+  },
+  {
+    "id": "sql-habits",
+    "date": "2026-09-12",
+    "title": "Five SQL habits that save me time",
+    "body": "None of these are clever. They just make a query easier to read six weeks later.\n\n## Name the grain\n\nBefore writing a join, say in a comment what one row of the result represents. Most wrong totals come from a join that quietly changed the grain.\n\n```\n-- one row per placement per week\nSELECT placement_id, week_start, SUM(units) AS units\nFROM   sales\nGROUP  BY placement_id, week_start;\n```\n\nThen count rows before and after each join. If the number moves when it should not, you found the problem early.",
+    "links": [],
+    "images": [],
+    "sample": true
+  },
+  {
+    "id": "learning-notes",
+    "date": "2026-08-20",
+    "title": "What I am learning this year",
+    "body": "This is the space for the personal side: what I am reading, what I am practising, and where I want to take my work next.\n\nReplace this sample with your own story, whether that is a project you are proud of, a lesson from a mistake, or a plan for the next few years.",
+    "links": [],
+    "images": [],
+    "sample": true
+  }
+]

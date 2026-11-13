@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mhlangabezi Mdwayi</title>
+<meta name="description" content="Data analyst in Cape Town. SQL, Python, Power BI, VBA and automation, with a blog of work as it happens.">
+<script>try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#top">Mhlangabezi Mdwayi</a>
+    <nav aria-label="Sections">
+      <a href="#work">Work</a>
+      <a href="#skills">Skills</a>
+      <a href="#tools">Tools</a>
+      <a href="#blog">Blog</a>
+      <a href="#resume" id="resumeNav" hidden>Resume</a>
+      <a href="#contact">Contact</a>
+      <button class="toggle" id="themeBtn" type="button" aria-label="Switch light or dark theme">Theme</button>
+    </nav>
+  </header>
+
+  <main id="home">
+    <div id="top"></div>
+
+    <section class="hero">
+      <h1>Data work that runs <em>on its own</em>.</h1>
+      <p class="lede">I'm a data analyst with over four years of experience turning complex datasets into clear insight. I build tools in SQL, Python, VBA and Power BI that save time, improve accuracy and support better decisions, and I automate the repetitive parts so the analysis gets the attention.</p>
+      <div class="query" role="img" aria-label="A SQL query that returns Mhlangabezi's name, role, employer, city and relocation status">
+        <pre><span class="kw">SELECT</span> name, role, employer, city, open_to_relocation
+<span class="kw">FROM</span>   analyst
+<span class="kw">WHERE</span>  name = <span class="str">'Mhlangabezi Mdwayi'</span>;</pre>
+        <div class="result">
+          <table>
+            <thead><tr><th>name</th><th>role</th><th>employer</th><th>city</th><th>open_to_relocation</th></tr></thead>
+            <tbody><tr><td>Mhlangabezi Mdwayi</td><td>Senior Analyst</td><td>Circana</td><td>Cape Town</td><td>true</td></tr></tbody>
+          </table>
+          <div class="meta">1 row returned</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="results">
+      <div class="head">
+        <span class="label">Results</span>
+        <h2>What the work changed</h2>
+      </div>
+      <div class="figures">
+        <div class="fig"><span class="n">~20 hrs</span><p>saved per month by an Excel VBA tool and add-in for the team</p><span class="label">Circana</span></div>
+        <div class="fig"><span class="n">6+</span><p>recurring processes automated in that one tool</p><span class="label">Circana</span></div>
+        <div class="fig"><span class="n">15%</span><p>fewer reprocessing errors after fixing database logic with other teams</p><span class="label">Circana</span></div>
+        <div class="fig"><span class="n">30%</span><p>less manual consolidation time from unifying data sources into one database</p><span class="label">Opinium</span></div>
+      </div>
+    </section>
+
+    <section class="block" id="work">
+      <div class="head">
+        <span class="label">Experience</span>
+        <h2>Three roles, one habit</h2>
+        <p class="sub">Starting with the most recent role. In every role I looked for what people repeat by hand and made it run on its own.</p>
+      </div>
+      <div class="path">
+        <article class="stage">
+          <span class="label">Circana &middot; Senior Analyst</span>
+          <span class="when">Feb 2025 to now</span>
+          <h3>Making it run itself</h3>
+          <p>Now the focus is the steps people repeat. A VBA tool and add-in run six recurring processes the same way every time and give the team about 20 hours a month back. A Power Automate tracker sequences the work and sends alerts, and a forecasting calculator turns scattered budget data into scenarios. With other teams I also fixed database logic, which cut reprocessing errors by 15%.</p>
+          <div class="built">
+            <span class="label">Built</span>
+            <div class="tools"><span class="chip">Excel add-in</span><span class="chip">Priorities tracker</span><span class="chip">Forecasting calculator</span></div>
+          </div>
+        </article>
+        <article class="stage">
+          <span class="label">Opinium &middot; Data Analyst</span>
+          <span class="when">Nov 2023 to Jan 2025</span>
+          <h3>Bringing it together</h3>
+          <p>I moved from preparing data to owning how it reached clients. Several sources went into one database, which cut manual consolidation time by 30%. On top of it sat Power BI dashboards and client reports, with validation checks behind them so people could trust the numbers and act on them.</p>
+          <div class="built">
+            <span class="label">Built</span>
+            <div class="tools"><span class="chip">One unified database</span><span class="chip">Power BI dashboards</span><span class="chip">Quality checks</span></div>
+          </div>
+        </article>
+        <article class="stage">
+          <span class="label">Opinium &middot; Junior Data Analyst</span>
+          <span class="when">Jan 2022 to Nov 2023</span>
+          <h3>Getting the data right</h3>
+          <p>I started at the source. I scripted and deployed the surveys that collected the data, then hunted down the duplicates, gaps and inconsistencies in what came back. I set up repeatable clean-up steps so each batch arrived cleaner than the last, and used SQL and Power Query to get large datasets ready for analysis.</p>
+          <div class="built">
+            <span class="label">Built</span>
+            <div class="tools"><span class="chip">Survey scripts</span><span class="chip">Repeatable clean-up steps</span><span class="chip">VBA translation function</span></div>
+          </div>
+        </article>
+      </div>
+      <div class="resume" id="resume" hidden>
+        <p>That is the story. The full detail, with dates and every project, is in my resume.</p>
+        <a class="btn" href="resume.pdf" download="Mhlangabezi-Mdwayi-Resume.pdf">Download resume (PDF)</a>
+      </div>
+    </section>
+
+    <section class="block" id="skills">
+      <div class="head">
+        <span class="label">Skills</span>
+        <h2>What I do with data</h2>
+        <p class="sub">Six areas I use week in, week out.</p>
+      </div>
+      <div class="skills">
+        <div class="skill"><span class="label">Query</span><h3>SQL</h3><p>Extracting, cleaning and validating data in PostgreSQL and SQL Server, and tuning queries so they stay fast.</p></div>
+        <div class="skill"><span class="label">Analyse</span><h3>Python</h3><p>Analysis and charts with Pandas, NumPy, matplotlib and seaborn.</p></div>
+        <div class="skill"><span class="label">Pipeline</span><h3>ETL and MDM</h3><p>Bringing several sources into one database with checks along the way, so reporting is faster and cleaner.</p></div>
+        <div class="skill"><span class="label">Automate</span><h3>Excel VBA</h3><p>Custom tools, add-ins and calculators that replace recurring manual steps.</p></div>
+        <div class="skill"><span class="label">Show</span><h3>Power BI</h3><p>Dashboards and client-facing reports with Power Query behind them.</p></div>
+        <div class="skill"><span class="label">Orchestrate</span><h3>Power Automate</h3><p>Trackers with email alerts and task sequencing that keep work moving.</p></div>
+      </div>
+    </section>
+
+    <section class="block" id="tools">
+      <div class="head">
+        <span class="label">Toolkit</span>
+        <h2>Tools I reach for</h2>
+      </div>
+      <div class="toolgroups">
+        <div class="toolgroup">
+          <span class="label">Data management</span>
+          <div class="tools"><span class="chip lead">PostgreSQL</span><span class="chip lead">SQL Server</span><span class="chip">MDM</span><span class="chip">ETL workflows</span></div>
+        </div>
+        <div class="toolgroup">
+          <span class="label">Programming and automation</span>
+          <div class="tools"><span class="chip lead">Python</span><span class="chip">Pandas</span><span class="chip">NumPy</span><span class="chip">matplotlib</span><span class="chip">seaborn</span><span class="chip lead">SQL</span><span class="chip lead">VBA</span><span class="chip">Power Automate</span></div>
+        </div>
+        <div class="toolgroup">
+          <span class="label">Analytics</span>
+          <div class="tools"><span class="chip lead">Power BI</span><span class="chip">Power Query</span><span class="chip">SPSS</span></div>
+        </div>
+        <div class="toolgroup">
+          <span class="label">AI tools</span>
+          <div class="tools"><span class="chip">Claude</span><span class="chip">ChatGPT</span><span class="chip">Cursor</span><span class="chip">Grok</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="education">
+      <div class="head">
+        <span class="label">Education</span>
+        <h2>Where it all began...</h2>
+      </div>
+      <div class="edu">
+        <div class="edu-row"><div class="when">2021</div><div><h3>BSc (Hons) Geo-informatics</h3><p>Stellenbosch University</p></div></div>
+        <div class="edu-row"><div class="when">2015 to 2017</div><div><h3>BSc GIS and Geology</h3><p>University of Fort Hare</p></div></div>
+      </div>
+    </section>
+
+    <section class="block" id="blog">
+      <div class="head">
+        <span class="label">Blog</span>
+        <h2>Work in progress, as it happens</h2>
+        <p class="sub">What I'm building, what I'm learning and what went wrong, with links and screenshots.</p>
+      </div>
+      <div id="adminBar"></div>
+      <p class="empty" id="loadNote">Loading posts...</p>
+      <div class="posts" id="postList"></div>
+    </section>
+
+    <section class="block" id="contact">
+      <div class="head">
+        <span class="label">Contact</span>
+        <h2>Let's talk data</h2>
+        <p class="sub">I'm based in Cape Town and open to relocation. Email is the best way to reach me.</p>
+      </div>
+      <div class="contact">
+        <span class="email" id="emailText">Mhlangabezimdwayi@gmail.com</span>
+        <button class="btn" id="copyBtn" type="button">Copy email</button>
+        <p class="note" id="copyNote" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <footer>
+      <span>Cape Town, South Africa. English, isiXhosa and isiZulu.</span>
+      <a class="foot-link" href="#owner">Owner sign-in</a>
+    </footer>
+  </main>
+
+  <article id="reader" class="reader" hidden></article>
+  <article id="composerView" class="editor-view" hidden></article>
+  <article id="ownerView" class="editor-view" hidden></article>
+</div>
+<noscript><p style="padding:16px">This site needs JavaScript to show the blog.</p></noscript>
+<script src="app.js" defer></script>
+</body>
+</html>
