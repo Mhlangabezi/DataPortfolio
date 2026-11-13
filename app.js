@@ -171,7 +171,8 @@
     }
     flushPara(); flushList();
   }
-  function excerpt(body) {
+  function excerpt(body, max) {
+    max = max || 160;
     var out = '', inCode = false;
     var lines = String(body || '').split('\n');
     for (var i = 0; i < lines.length; i++) {
@@ -179,9 +180,9 @@
       if (/^```/.test(l)) { inCode = !inCode; continue; }
       if (inCode || /^##\s+/.test(l) || /^\s*$/.test(l)) continue;
       out += (out ? ' ' : '') + l.replace(/^\s*[-*]\s+/, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/`/g, '').trim();
-      if (out.length > 170) break;
+      if (out.length > max + 10) break;
     }
-    if (out.length > 160) out = out.slice(0, 157).replace(/\s+\S*$/, '') + '...';
+    if (out.length > max) out = out.slice(0, max - 3).replace(/\s+\S*$/, '') + '...';
     return out;
   }
 
@@ -368,31 +369,32 @@
   function renderList() {
     list.textContent = '';
     if (!loaded) return;
-    var sorted = posts.slice().sort(function (a, b) { return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
+    var sorted = posts.slice().sort(function (x, y) { return x.date < y.date ? 1 : (x.date > y.date ? -1 : 0); });
     if (!sorted.length) {
       list.appendChild(el('p', 'empty', cfg ? 'No posts yet. Choose New post to write the first one.' : 'No posts yet. Check back soon.'));
       return;
     }
-    sorted.forEach(function (p) {
-      var item = el('div', 'post-item');
-      var a = el('a', 'post-link');
+    sorted.forEach(function (p, idx) {
+      var featured = idx === 0;
+      var item = el('div', 'post-item' + (featured ? ' featured' : ''));
+      var a = el('a', 'post-link' + (p.images.length ? ' has-media' : ''));
       a.href = '#post-' + p.id;
-      a.appendChild(el('span', 'date', fmt(p.date)));
-      var mid = el('div');
-      mid.appendChild(el('h3', '', titleOf(p)));
-      var ex = excerpt(p.body);
-      if (ex) mid.appendChild(el('p', 'ex', ex));
-      a.appendChild(mid);
-      var aside = el('div', 'aside');
-      if (p.sample) aside.appendChild(el('span', 'tag', 'Sample'));
       if (p.images.length) {
         var th = el('img', 'thumb');
         th.src = imgSrc(p.images[0].src);
         th.alt = '';
         th.loading = 'lazy';
-        aside.appendChild(th);
+        a.appendChild(th);
       }
-      a.appendChild(aside);
+      var body = el('div', 'card-body');
+      var meta = el('div', 'card-meta');
+      meta.appendChild(el('span', 'date', fmt(p.date)));
+      if (p.sample) meta.appendChild(el('span', 'tag', 'Sample'));
+      body.appendChild(meta);
+      body.appendChild(el('h3', '', titleOf(p)));
+      var ex = excerpt(p.body, featured ? 320 : 150);
+      if (ex) body.appendChild(el('p', 'ex', ex));
+      a.appendChild(body);
       item.appendChild(a);
       if (cfg) item.appendChild(toolsFor(p));
       list.appendChild(item);

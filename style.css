@@ -269,3 +269,29 @@ textarea.in { min-height: 220px; resize: vertical; font-family: var(--f-mono); f
   .intro p { text-align: justify; text-justify: inter-word; hyphens: auto; -webkit-hyphens: auto; text-wrap: pretty; }
   .intro p.kicker { text-align: left; hyphens: manual; }
 }
+
+
+/* ---------- blog: featured newest post plus a card grid ---------- */
+.posts { grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 20px; align-items: stretch; }
+.post-item, .post-item:last-child { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; background: var(--bg); transition: border-color .15s; }
+.post-item:hover { border-color: var(--accent); }
+.post-item.featured { grid-column: 1 / -1; }
+.post-link { display: flex; flex-direction: column; flex: 1; padding-block: 0; gap: 0; align-items: stretch; grid-template-columns: none; }
+.post-item .thumb { width: 100%; max-width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
+.card-body { display: grid; gap: 10px; padding: 22px; align-content: start; min-width: 0; }
+.card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.post-item .post-link h3 { font-size: 22px; }
+.post-item .ex { margin-top: 0; }
+.post-item .post-tools { padding: 0 22px 20px; }
+.post-item.featured .card-body { padding: 32px; gap: 14px; align-content: center; }
+.post-item.featured .post-link h3 { font-size: clamp(28px, 4vw, 38px); }
+.post-item.featured .ex { font-size: 17px; max-width: 62ch; }
+@media (min-width: 760px) {
+  .post-item.featured .post-link.has-media { flex-direction: row; }
+  .post-item.featured .post-link.has-media .thumb { width: 46%; aspect-ratio: auto; min-height: 260px; height: auto; border-bottom: 0; border-right: 1px solid var(--line); }
+  .post-item.featured .post-link.has-media .card-body { flex: 1; }
+}
+@media (max-width: 640px) {
+  .post-item .post-tools { padding-left: 22px; }
+  .post-item.featured .card-body { padding: 22px; }
+}
