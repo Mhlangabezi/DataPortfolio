@@ -811,9 +811,40 @@
   bindCopy();
   // Show the resume download only when resume.pdf is actually in the repository.
   fetch('resume.pdf', { method: 'HEAD', cache: 'no-cache' }).then(function (r) {
-    if (r.ok) { $('resume').hidden = false; $('resumeNav').hidden = false; }
+    if (r.ok) { $('resume').hidden = false; $('resumeNav').hidden = false; settleAnchor(); }
   }).catch(function () {});
-  window.addEventListener('hashchange', function () { pendingDelete = null; route(true); });
+  // Content that appears after load (the resume block, the post list) can push a section down after the browser
+  // already jumped to a #link. Jump again, once, so shared links land where they should.
+  function settleAnchor() {
+    var h = location.hash.slice(1);
+    if (!h || home.hidden) return;
+    var t = document.getElementById(h);
+    if (t && home.contains(t)) t.scrollIntoView({ block: 'start', behavior: 'instant' });
+  }
+
+  // Highlight the menu item for the section being read. Sections with no menu item (results, education) highlight nothing.
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('nav a'));
+  var spyIds = ['results', 'work', 'skills', 'tools', 'education', 'blog', 'contact'];
+  var ticking = false;
+  function updateActive() {
+    ticking = false;
+    var current = null;
+    if (!home.hidden) {
+      spyIds.forEach(function (id) {
+        var s = $(id);
+        if (s && s.getBoundingClientRect().top <= 140) current = id;
+      });
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) current = 'contact';
+    }
+    navLinks.forEach(function (a) {
+      if (current && a.getAttribute('href') === '#' + current) a.setAttribute('aria-current', 'true');
+      else a.removeAttribute('aria-current');
+    });
+  }
+  function queueActive() { if (!ticking) { ticking = true; requestAnimationFrame(updateActive); } }
+  window.addEventListener('scroll', queueActive, { passive: true });
+  window.addEventListener('resize', queueActive);
+  window.addEventListener('hashchange', function () { pendingDelete = null; route(true); queueActive(); });
   route(false);
 
   fetch('posts.json', { cache: 'no-cache' })
@@ -823,5 +854,5 @@
       loadNote.hidden = false;
       loadNote.textContent = 'The posts could not be loaded. If you opened this file straight from a folder, view the site on GitHub Pages or through a local web server instead.';
     })
-    .then(function () { renderHome(); route(false); return refreshFromRepo(); });
+    .then(function () { renderHome(); route(false); settleAnchor(); queueActive(); return refreshFromRepo(); });
 })();

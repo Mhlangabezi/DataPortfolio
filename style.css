@@ -295,3 +295,34 @@ textarea.in { min-height: 220px; resize: vertical; font-family: var(--f-mono); f
   .post-item .post-tools { padding-left: 22px; }
   .post-item.featured .card-body { padding: 22px; }
 }
+
+
+/* ---------- header and navigation ---------- */
+header.top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 16px; padding-block: 14px; }
+.brand { grid-column: 1; grid-row: 1; }
+.toggle { grid-column: 2; grid-row: 1; }
+nav { grid-column: 1 / -1; grid-row: 2; justify-self: start; max-width: 100%; display: flex; flex-wrap: nowrap; gap: 2px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; overflow-x: auto; scrollbar-width: none; }
+nav::-webkit-scrollbar { display: none; }
+nav a { font-family: var(--f-mono); font-size: 13px; letter-spacing: 0.02em; color: var(--muted); padding: 7px 14px; border-radius: 999px; white-space: nowrap; text-decoration: none; transition: background .15s, color .15s; }
+nav a:hover { color: var(--fg); background: var(--bg); }
+nav a[aria-current="true"] { background: var(--accent); color: var(--accent-ink); }
+.toggle { width: 40px; height: 40px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--fg); display: inline-grid; place-items: center; cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
+.toggle:hover { background: var(--bg); border-color: var(--accent); color: var(--accent); }
+.toggle svg { display: block; }
+.toggle .sun { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .toggle .sun { display: block; }
+  :root:not([data-theme="light"]) .toggle .moon { display: none; }
+}
+:root[data-theme="dark"] .toggle .sun { display: block; }
+:root[data-theme="dark"] .toggle .moon { display: none; }
+@media (min-width: 760px) {
+  header.top { grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px 20px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); background: color-mix(in srgb, var(--bg) 95%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  nav { grid-column: 2; grid-row: 1; justify-self: end; }
+  .toggle { grid-column: 3; }
+  section.block, #top { scroll-margin-top: 84px; }
+}
+@media (prefers-reduced-motion: reduce) { nav a, .toggle { transition: none; } }
+@media (max-width: 480px) {
+  nav a { font-size: 12px; padding: 7px 8px; letter-spacing: 0; }
+}
