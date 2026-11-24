@@ -1,10 +1,10 @@
 /*
   Portfolio site script.
 
-  Visitors: loads posts.json and shows the blog.
-  Owner: after signing in with a GitHub access token, can add, edit and delete posts.
-  Every change is saved to your GitHub repository as one commit (posts.json plus any
-  pictures). GitHub decides who may write, so nobody else can change anything.
+  Visitors: loads posts.json and projects.json and shows the blog and the projects page.
+  Owner: after signing in with a GitHub access token, can add, edit and delete posts and projects.
+  Every change is saved to your GitHub repository as one commit (posts.json or projects.json
+  plus any pictures). GitHub decides who may write, so nobody else can change anything.
 */
 (function () {
   'use strict';
@@ -16,10 +16,13 @@
   var API = 'https://api.github.com';
 
   function $(id) { return document.getElementById(id); }
-  var home = $('home'), reader = $('reader'), composerView = $('composerView'), ownerView = $('ownerView');
+  var home = $('home'), reader = $('reader'), composerView = $('composerView'), ownerView = $('ownerView'), projectsView = $('projectsView');
   var list = $('postList'), adminBar = $('adminBar'), loadNote = $('loadNote');
 
   var posts = [];
+  var projects = [];
+  var projectsLoaded = false;
+  var inProjects = false;      // true while a Projects page is on screen (for the menu highlight)
   var loaded = false;
   var cfg = null;              // { repo, token, branch } once signed in
   var busy = false;
@@ -52,14 +55,16 @@
     return t.slice(0, 50).replace(/-+$/, '');
   }
   function rand(n) { return Math.random().toString(36).slice(2, 2 + n).padEnd(n, '0'); }
-  function find(id) {
-    for (var i = 0; i < posts.length; i++) if (posts[i].id === id) return posts[i];
+  function findIn(arr, id) {
+    for (var i = 0; i < arr.length; i++) if (arr[i].id === id) return arr[i];
     return null;
   }
-  function makeId(title, date) {
-    var base = slugify(title) || ('update-' + date.replace(/-/g, ''));
+  function find(id) { return findIn(posts, id); }
+  function findProject(id) { return findIn(projects, id); }
+  function makeId(title, date, arr, fallback) {
+    var base = slugify(title) || (fallback + '-' + date.replace(/-/g, ''));
     var id = base, n = 2;
-    while (find(id)) { id = base + '-' + n; n += 1; }
+    while (findIn(arr, id)) { id = base + '-' + n; n += 1; }
     return id;
   }
   function safeUrl(u) {
@@ -103,6 +108,38 @@
     });
     return JSON.stringify(out, null, 2) + '\n';
   }
+  var SECTIONS = { case: 1, findings: 1 };
+  function cleanProjects(raw) {
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(function (p) { return p && typeof p === 'object' && typeof p.id === 'string' && p.id; }).map(function (p) {
+      return {
+        id: String(p.id),
+        date: String(p.date || ''),
+        title: String(p.title || ''),
+        summary: String(p.summary || ''),
+        businessCase: String(p.businessCase || ''),
+        stack: (Array.isArray(p.stack) ? p.stack : []).map(function (t) { return String(t).trim(); }).filter(Boolean).slice(0, 40),
+        findings: String(p.findings || ''),
+        links: (Array.isArray(p.links) ? p.links : []).filter(function (l) { return l && safeUrl(l.url); })
+          .map(function (l) { return { label: String(l.label || ''), url: safeUrl(l.url) }; }),
+        images: (Array.isArray(p.images) ? p.images : []).filter(function (im) { return im && safeSrc(im.src); })
+          .map(function (im) { return { src: String(im.src), alt: String(im.alt || ''), caption: String(im.caption || ''), section: SECTIONS[im.section] ? im.section : '' }; }),
+        sample: p.sample === true
+      };
+    });
+  }
+  function serializeProjects(arr) {
+    var out = arr.map(function (p) {
+      var o = { id: p.id, date: p.date, title: p.title, summary: p.summary, businessCase: p.businessCase, stack: p.stack, findings: p.findings, links: p.links, images: p.images };
+      if (p.sample) o.sample = true;
+      return o;
+    });
+    return JSON.stringify(out, null, 2) + '\n';
+  }
+  var KINDS = {
+    posts: { file: 'posts.json', clean: clean, serialize: serialize },
+    projects: { file: 'projects.json', clean: cleanProjects, serialize: serializeProjects }
+  };
   function setStatus(msg) {
     var all = document.querySelectorAll('.status-msg');
     for (var i = 0; i < all.length; i++) all[i].textContent = msg;
@@ -204,15 +241,16 @@
     }
     return data;
   }
-  async function readPosts(repo, ref) {
+  async function readItems(kind, repo, ref) {
+    var K = KINDS[kind];
     var h = headers(cfg.token, false);
     h.Accept = 'application/vnd.github.raw+json';
-    var res = await fetch(API + '/repos/' + repo + '/contents/posts.json?ref=' + encodeURIComponent(ref), { headers: h });
+    var res = await fetch(API + '/repos/' + repo + '/contents/' + K.file + '?ref=' + encodeURIComponent(ref), { headers: h });
     if (res.status === 404) return [];
     if (!res.ok) { var e = new Error('GitHub error ' + res.status); e.status = res.status; throw e; }
     var text = await res.text();
-    try { return clean(JSON.parse(text)); } catch (e2) {
-      throw new Error('posts.json in your repository is not valid JSON. Fix it on GitHub, then try again.');
+    try { return K.clean(JSON.parse(text)); } catch (e2) {
+      throw new Error(K.file + ' in your repository is not valid JSON. Fix it on GitHub, then try again.');
     }
   }
   async function listImages(repo, ref) {
@@ -226,20 +264,21 @@
       throw e;
     }
   }
-  /* Saves everything as ONE commit: new pictures, deleted pictures and posts.json.
-     mutate(currentPosts) returns { posts, deletePaths } built from the latest copy on GitHub. */
-  async function commit(message, mutate, newFiles) {
+  /* Saves everything as ONE commit: new pictures, deleted pictures and the data file (posts.json or projects.json).
+     mutate(currentItems) returns { items, deletePaths } built from the latest copy on GitHub. */
+  async function commit(kind, message, mutate, newFiles) {
+    var K = KINDS[kind];
     var repo = cfg.repo, branch = cfg.branch;
     for (var attempt = 0; attempt < 2; attempt++) {
       var ref = await api('GET', '/repos/' + repo + '/git/ref/heads/' + encodeURI(branch));
       var headSha = ref.object.sha;
       var head = await api('GET', '/repos/' + repo + '/git/commits/' + headSha);
-      var current = await readPosts(repo, headSha);
+      var current = await readItems(kind, repo, headSha);
       var result = mutate(current);
       var existing = await listImages(repo, headSha);
       var entries = [];
-      var pj = await api('POST', '/repos/' + repo + '/git/blobs', { content: serialize(result.posts), encoding: 'utf-8' });
-      entries.push({ path: 'posts.json', mode: '100644', type: 'blob', sha: pj.sha });
+      var pj = await api('POST', '/repos/' + repo + '/git/blobs', { content: K.serialize(result.items), encoding: 'utf-8' });
+      entries.push({ path: K.file, mode: '100644', type: 'blob', sha: pj.sha });
       for (var i = 0; i < newFiles.length; i++) {
         var b = await api('POST', '/repos/' + repo + '/git/blobs', { content: newFiles[i].base64, encoding: 'base64' });
         entries.push({ path: newFiles[i].path, mode: '100644', type: 'blob', sha: b.sha });
@@ -251,7 +290,7 @@
       var nc = await api('POST', '/repos/' + repo + '/git/commits', { message: message, tree: tree.sha, parents: [headSha] });
       try {
         await api('PATCH', '/repos/' + repo + '/git/refs/heads/' + encodeURI(branch), { sha: nc.sha, force: false });
-        return result.posts;
+        return result.items;
       } catch (e) {
         if (e.status === 422 && attempt === 0) continue;   // the branch moved while we worked: start again once
         throw e;
@@ -283,12 +322,13 @@
     if (!cfg) return;
     try {
       var ref = await api('GET', '/repos/' + cfg.repo + '/git/ref/heads/' + encodeURI(cfg.branch));
-      posts = await readPosts(cfg.repo, ref.object.sha);
+      posts = await readItems('posts', cfg.repo, ref.object.sha);
       loaded = true;
       loadNote.hidden = true;
+      try { projects = await readItems('projects', cfg.repo, ref.object.sha); projectsLoaded = true; } catch (e3) { /* keep the served copy */ }
       renderHome();
       var h = location.hash.slice(1);
-      if (h.indexOf('post-') === 0) route(false);
+      if (h.indexOf('post-') === 0 || h.indexOf('project') === 0 || h === 'new-project') route(false);
     } catch (e) { /* keep the copy that GitHub Pages served */ }
   }
 
@@ -325,6 +365,8 @@
     var dataUrl = await readAsDataUrl(blob);
     return { dataUrl: dataUrl, base64: dataUrl.split(',')[1], ext: type === 'image/png' ? 'png' : (type === 'image/gif' ? 'gif' : 'jpg') };
   }
+
+  function hideAll() { home.hidden = true; reader.hidden = true; composerView.hidden = true; ownerView.hidden = true; projectsView.hidden = true; }
 
   /* ---------- home: owner bar and post list ---------- */
   function renderAdmin() {
@@ -456,7 +498,7 @@
       reader.appendChild(box);
     }
     document.title = titleOf(p) + ' | ' + TITLE;
-    home.hidden = true; composerView.hidden = true; ownerView.hidden = true;
+    hideAll(); inProjects = false;
     reader.hidden = false;
   }
 
@@ -599,7 +641,7 @@
         if (!u) { setStatus('Link ' + (k + 1) + ' is not a valid web address.'); return; }
         links.push({ label: String(row.label).trim() || hostOf(u), url: u });
       }
-      var id = draft.id || makeId(t, date.value);
+      var id = draft.id || makeId(t, date.value, posts, 'update');
       var newFiles = [], images = [];
       draft.images.forEach(function (im, n) {
         if (im.existing) {
@@ -618,11 +660,11 @@
       submit.disabled = true;
       setStatus('Publishing...');
       try {
-        posts = await commit((isEdit ? 'Update post: ' : 'Add post: ') + (t || id), function (current) {
+        posts = await commit('posts', (isEdit ? 'Update post: ' : 'Add post: ') + (t || id), function (current) {
           var next = isEdit && current.some(function (p) { return p.id === id; })
             ? current.map(function (p) { return p.id === id ? post : p; })
             : [post].concat(current);
-          return { posts: next, deletePaths: removed };
+          return { items: next, deletePaths: removed };
         }, newFiles);
         loaded = true;
         notice = (isEdit ? 'Post updated.' : 'Post published.') + ' The public site shows it in about a minute.';
@@ -637,7 +679,7 @@
 
     composerView.appendChild(form);
     document.title = (existing ? 'Edit post' : 'New post') + ' | ' + TITLE;
-    home.hidden = true; reader.hidden = true; ownerView.hidden = true;
+    hideAll(); inProjects = false;
     composerView.hidden = false;
   }
 
@@ -647,10 +689,10 @@
     say('Deleting...');
     refreshViews();
     try {
-      posts = await commit('Delete post: ' + (p.title || p.id), function (current) {
+      posts = await commit('posts', 'Delete post: ' + (p.title || p.id), function (current) {
         var target = null;
         current.forEach(function (x) { if (x.id === p.id) target = x; });
-        return { posts: current.filter(function (x) { return x.id !== p.id; }), deletePaths: target ? target.images.map(function (im) { return im.src; }) : [] };
+        return { items: current.filter(function (x) { return x.id !== p.id; }), deletePaths: target ? target.images.map(function (im) { return im.src; }) : [] };
       }, []);
       notice = 'Post deleted. The public site updates in about a minute.';
     } catch (e) {
@@ -660,6 +702,399 @@
     pendingDelete = null;
     if (location.hash.slice(1) === 'post-' + p.id && !find(p.id)) location.hash = '#blog';
     else { refreshViews(); setStatus(notice); }
+  }
+
+  /* ---------- projects ---------- */
+  function projTools(p) {
+    var key = 'p:' + p.id;
+    var box = el('div', 'post-tools');
+    var edit = el('a', 'mini', 'Edit');
+    edit.href = '#projectedit-' + p.id;
+    box.appendChild(edit);
+    if (pendingDelete === key) {
+      box.appendChild(el('span', 'ask', 'Delete this project for good?'));
+      var yes = el('button', 'mini solid', 'Yes, delete');
+      yes.type = 'button';
+      yes.disabled = busy;
+      yes.addEventListener('click', function () { deleteProject(p); });
+      var no = el('button', 'mini', 'Cancel');
+      no.type = 'button';
+      no.addEventListener('click', function () { pendingDelete = null; refreshProjectViews(); });
+      box.appendChild(yes);
+      box.appendChild(no);
+    } else {
+      var del = el('button', 'mini danger', 'Delete');
+      del.type = 'button';
+      del.disabled = busy;
+      del.addEventListener('click', function () { pendingDelete = key; refreshProjectViews(); });
+      box.appendChild(del);
+    }
+    return box;
+  }
+  function stackChips(list, max) {
+    var box = el('div', 'stack');
+    var shown = max ? list.slice(0, max) : list;
+    shown.forEach(function (t) { box.appendChild(el('span', 'chip', t)); });
+    if (max && list.length > max) box.appendChild(el('span', 'chip more', '+' + (list.length - max)));
+    return box;
+  }
+  function renderProjects() {
+    projectsView.textContent = '';
+    var back = el('a', 'back', '← Back to home');
+    back.href = '#top';
+    projectsView.appendChild(back);
+    var head = el('div', 'head');
+    head.appendChild(el('span', 'label', 'Projects'));
+    head.appendChild(el('h1', '', 'Things I have built'));
+    head.appendChild(el('p', 'sub', 'Each project starts with the business problem, then the tools I used and what I found.'));
+    projectsView.appendChild(head);
+    if (cfg) {
+      var bar = el('div', 'admin-bar');
+      bar.appendChild(el('p', '', 'Owner mode. Projects you publish are saved to ' + cfg.repo + ' and appear on the public site about a minute later.'));
+      var add = el('a', 'btn', 'New project');
+      add.href = '#new-project';
+      bar.appendChild(add);
+      var s = el('span', 'status-msg');
+      s.setAttribute('aria-live', 'polite');
+      s.textContent = notice;
+      bar.appendChild(s);
+      projectsView.appendChild(bar);
+    }
+    var grid = el('div', 'posts projects');
+    if (!projectsLoaded) {
+      projectsView.appendChild(el('p', 'empty', 'The projects could not be loaded. If you opened this file straight from a folder, view the site on GitHub Pages or through a local web server instead.'));
+      return;
+    }
+    var sorted = projects.slice().sort(function (x, y) { return x.date < y.date ? 1 : (x.date > y.date ? -1 : 0); });
+    if (!sorted.length) {
+      projectsView.appendChild(el('p', 'empty', cfg ? 'No projects yet. Choose New project to add the first one.' : 'Projects will appear here as I finish them.'));
+      return;
+    }
+    sorted.forEach(function (p) {
+      var item = el('div', 'post-item');
+      var a = el('a', 'post-link' + (p.images.length ? ' has-media' : ''));
+      a.href = '#project-' + p.id;
+      if (p.images.length) {
+        var th = el('img', 'thumb');
+        th.src = imgSrc(p.images[0].src);
+        th.alt = '';
+        th.loading = 'lazy';
+        a.appendChild(th);
+      }
+      var body = el('div', 'card-body');
+      var meta = el('div', 'card-meta');
+      meta.appendChild(el('span', 'date', fmt(p.date)));
+      if (p.sample) meta.appendChild(el('span', 'tag', 'Sample'));
+      body.appendChild(meta);
+      body.appendChild(el('h3', '', p.title || 'Untitled project'));
+      var ex = p.summary ? excerpt(p.summary, 170) : excerpt(p.businessCase, 170);
+      if (ex) body.appendChild(el('p', 'ex', ex));
+      if (p.stack.length) body.appendChild(stackChips(p.stack, 4));
+      a.appendChild(body);
+      item.appendChild(a);
+      if (cfg) item.appendChild(projTools(p));
+      grid.appendChild(item);
+    });
+    projectsView.appendChild(grid);
+  }
+  function refreshProjectViews() {
+    if (!projectsView.hidden) renderProjects();
+    var h = location.hash.slice(1);
+    if (h.indexOf('project-') === 0 && !reader.hidden) { var p = findProject(h.slice(8)); if (p) showProject(p); }
+  }
+  function figureFor(im) {
+    var fig = el('figure', 'shot');
+    var a = el('a');
+    a.href = imgSrc(im.src);
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    var img = el('img');
+    img.src = imgSrc(im.src);
+    img.alt = im.alt || im.caption || '';
+    img.loading = 'lazy';
+    a.appendChild(img);
+    fig.appendChild(a);
+    if (im.caption) fig.appendChild(el('figcaption', '', im.caption));
+    return fig;
+  }
+  function showProjects() {
+    hideAll();
+    inProjects = true;
+    renderProjects();
+    document.title = 'Projects | ' + TITLE;
+    projectsView.hidden = false;
+  }
+  function showProject(p) {
+    reader.textContent = '';
+    var back = el('a', 'back', '← Back to all projects');
+    back.href = '#projects';
+    reader.appendChild(back);
+    reader.appendChild(el('h1', '', p.title || 'Untitled project'));
+    var by = el('div', 'byline');
+    by.appendChild(el('span', 'label', fmt(p.date)));
+    if (p.sample) by.appendChild(el('span', 'tag', 'Sample'));
+    reader.appendChild(by);
+    if (cfg) {
+      reader.appendChild(projTools(p));
+      var s = el('span', 'status-msg');
+      s.setAttribute('aria-live', 'polite');
+      s.textContent = notice;
+      reader.appendChild(s);
+    }
+    if (p.summary) reader.appendChild(el('p', 'lead', p.summary));
+    function section(title, text, sec) {
+      var imgs = p.images.filter(function (im) { return im.section === sec; });
+      if (!text && !imgs.length) return;
+      var box = el('section', 'psec');
+      box.appendChild(el('h2', '', title));
+      if (text) { var b = el('div', 'body'); renderBody(b, text); box.appendChild(b); }
+      imgs.forEach(function (im) { box.appendChild(figureFor(im)); });
+      reader.appendChild(box);
+    }
+    section('The business case', p.businessCase, 'case');
+    if (p.stack.length) {
+      var st = el('section', 'psec');
+      st.appendChild(el('h2', '', 'Tech stack'));
+      st.appendChild(stackChips(p.stack));
+      reader.appendChild(st);
+    }
+    section('Findings', p.findings, 'findings');
+    var rest = p.images.filter(function (im) { return !im.section; });
+    if (rest.length) {
+      var g = el('section', 'psec');
+      g.appendChild(el('h2', '', 'Screenshots'));
+      rest.forEach(function (im) { g.appendChild(figureFor(im)); });
+      reader.appendChild(g);
+    }
+    if (p.links.length) {
+      var box = el('div', 'links');
+      box.appendChild(el('span', 'label', 'Links'));
+      var ul = el('ul');
+      p.links.forEach(function (l) {
+        var li = el('li');
+        li.appendChild(extLink(l.url, l.label || hostOf(l.url)));
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+      reader.appendChild(box);
+    }
+    document.title = (p.title || 'Project') + ' | ' + TITLE;
+    hideAll();
+    inProjects = true;
+    reader.hidden = false;
+  }
+
+  /* shared pieces of the project form */
+  function linksEditor(d) {
+    var f = el('div', 'field');
+    f.appendChild(el('span', 'label', 'Links'));
+    var box = el('div', 'rows');
+    f.appendChild(box);
+    var add = el('button', 'mini', 'Add a link');
+    add.type = 'button';
+    f.appendChild(add);
+    function draw() {
+      box.textContent = '';
+      d.links.forEach(function (l, i) {
+        var row = el('div', 'row');
+        var lab = input('text'); lab.placeholder = 'Label, e.g. Source code'; lab.value = l.label; lab.setAttribute('aria-label', 'Label for link ' + (i + 1));
+        lab.addEventListener('input', function () { l.label = lab.value; });
+        var url = input('text'); url.placeholder = 'https://...'; url.value = l.url; url.setAttribute('inputmode', 'url'); url.setAttribute('aria-label', 'Address for link ' + (i + 1));
+        url.addEventListener('input', function () { l.url = url.value; });
+        var rm = el('button', 'mini danger', 'Remove');
+        rm.type = 'button';
+        rm.addEventListener('click', function () { d.links.splice(i, 1); draw(); });
+        row.appendChild(lab); row.appendChild(url); row.appendChild(rm);
+        box.appendChild(row);
+      });
+    }
+    add.addEventListener('click', function () { d.links.push({ label: '', url: '' }); draw(); });
+    draw();
+    return f;
+  }
+  function picsEditor(d) {
+    var f = el('div', 'field');
+    f.appendChild(el('span', 'label', 'Pictures and screenshots'));
+    var box = el('div', 'rows');
+    f.appendChild(box);
+    var files = input('file');
+    files.accept = 'image/jpeg,image/png,image/webp,image/gif';
+    files.multiple = true;
+    f.appendChild(field('f-files', 'Add pictures', files, 'JPEG, PNG, WebP or GIF. Large pictures are resized to 1600 pixels on the longest side before saving. Choose where each one is shown.'));
+    function draw() {
+      box.textContent = '';
+      d.images.forEach(function (im, i) {
+        var row = el('div', 'imgrow');
+        var th = el('img');
+        th.src = im.existing ? imgSrc(im.src) : im.dataUrl;
+        th.alt = '';
+        var fields = el('div', 'fields');
+        var alt = input('text'); alt.placeholder = 'Describe the picture (read aloud by screen readers)'; alt.value = im.alt; alt.setAttribute('aria-label', 'Description for picture ' + (i + 1));
+        alt.addEventListener('input', function () { im.alt = alt.value; });
+        var cap = input('text'); cap.placeholder = 'Caption (optional)'; cap.value = im.caption; cap.setAttribute('aria-label', 'Caption for picture ' + (i + 1));
+        cap.addEventListener('input', function () { im.caption = cap.value; });
+        var sel = el('select', 'in');
+        sel.setAttribute('aria-label', 'Where to show picture ' + (i + 1));
+        [['', 'Show in the screenshots gallery'], ['case', 'Show under the business case'], ['findings', 'Show under the findings']].forEach(function (o) {
+          var op = el('option', '', o[1]); op.value = o[0]; if (im.section === o[0]) op.selected = true; sel.appendChild(op);
+        });
+        sel.addEventListener('change', function () { im.section = sel.value; });
+        fields.appendChild(alt); fields.appendChild(cap); fields.appendChild(sel);
+        var rm = el('button', 'mini danger', 'Remove');
+        rm.type = 'button';
+        rm.addEventListener('click', function () {
+          if (im.existing) removedSrcs.push(im.src);
+          d.images.splice(i, 1);
+          draw();
+        });
+        row.appendChild(th); row.appendChild(fields); row.appendChild(rm);
+        box.appendChild(row);
+      });
+    }
+    files.addEventListener('change', async function () {
+      var chosen = Array.prototype.slice.call(files.files);
+      files.value = '';
+      for (var i = 0; i < chosen.length; i++) {
+        try {
+          setStatus('Preparing ' + chosen[i].name + '...');
+          var im = await processImage(chosen[i]);
+          d.images.push({ existing: false, dataUrl: im.dataUrl, base64: im.base64, ext: im.ext, alt: '', caption: '', section: '' });
+          draw();
+          setStatus('');
+        } catch (e) { setStatus(e.message || 'Could not add that picture.'); }
+      }
+    });
+    draw();
+    return f;
+  }
+  function showProjectComposer(existing) {
+    removedSrcs = [];
+    var d = existing ? {
+      id: existing.id,
+      links: existing.links.map(function (l) { return { label: l.label, url: l.url }; }),
+      images: existing.images.map(function (im) { return { existing: true, src: im.src, alt: im.alt, caption: im.caption, section: im.section || '' }; })
+    } : { id: null, links: [], images: [] };
+    var src = existing || { title: '', date: today(), summary: '', businessCase: '', stack: [], findings: '' };
+
+    composerView.textContent = '';
+    var back = el('a', 'back', '← Back to all projects');
+    back.href = '#projects';
+    composerView.appendChild(back);
+    composerView.appendChild(el('h1', '', existing ? 'Edit project' : 'New project'));
+    var form = el('form', 'editor');
+    form.noValidate = true;
+
+    var title = input('text'); title.maxLength = 140; title.value = src.title;
+    var date = input('date'); date.value = src.date || today();
+    var summary = el('textarea', 'in'); summary.rows = 3; summary.value = src.summary;
+    summary.placeholder = 'One or two sentences: what it is and why it matters.';
+    var biz = el('textarea', 'in'); biz.rows = 8; biz.value = src.businessCase;
+    biz.placeholder = 'Who needed this? What problem or decision was it for? What did it cost them before?';
+    var stack = input('text'); stack.value = src.stack.join(', ');
+    stack.placeholder = 'SQL, Python, Power BI';
+    var fnd = el('textarea', 'in'); fnd.rows = 8; fnd.value = src.findings;
+    fnd.placeholder = 'What did you find or deliver? Numbers, patterns, what changed, what you would do next.';
+    var fmtHint = 'A blank line starts a new paragraph. Start a line with ## for a heading or - for a bullet. Write [text](https://address) for a link, `backticks` for code.';
+
+    form.appendChild(field('p-title', 'Project title', title));
+    form.appendChild(field('p-date', 'Date finished', date));
+    form.appendChild(field('p-summary', 'Short summary', summary, 'Shown on the project card.'));
+    form.appendChild(field('p-biz', 'Business case', biz, fmtHint));
+    form.appendChild(field('p-stack', 'Tech stack', stack, 'Separate the tools with commas.'));
+    form.appendChild(field('p-find', 'Findings', fnd, fmtHint));
+    form.appendChild(linksEditor(d));
+    form.appendChild(picsEditor(d));
+
+    var actions = el('div', 'actions');
+    var submit = el('button', 'btn', 'Publish');
+    submit.type = 'submit';
+    var cancel = el('a', 'mini', 'Cancel');
+    cancel.href = '#projects';
+    var st = el('span', 'status-msg');
+    st.setAttribute('aria-live', 'polite');
+    actions.appendChild(submit); actions.appendChild(cancel); actions.appendChild(st);
+    form.appendChild(actions);
+
+    form.addEventListener('submit', async function (ev) {
+      ev.preventDefault();
+      if (busy) return;
+      var t = title.value.trim();
+      if (!t) { setStatus('Give the project a title.'); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date.value)) { setStatus('Pick a date.'); return; }
+      var links = [];
+      for (var k = 0; k < d.links.length; k++) {
+        var row = d.links[k];
+        if (!String(row.url).trim()) continue;
+        var u = normUrl(row.url);
+        if (!u) { setStatus('Link ' + (k + 1) + ' is not a valid web address.'); return; }
+        links.push({ label: String(row.label).trim() || hostOf(u), url: u });
+      }
+      var id = d.id || makeId(t, date.value, projects, 'project');
+      var newFiles = [], images = [];
+      d.images.forEach(function (im, n) {
+        var meta = { alt: im.alt.trim(), caption: im.caption.trim(), section: im.section || '' };
+        if (im.existing) {
+          images.push({ src: im.src, alt: meta.alt, caption: meta.caption, section: meta.section });
+        } else {
+          var path = 'images/project-' + id + '-' + (n + 1) + '-' + rand(4) + '.' + im.ext;
+          newFiles.push({ path: path, base64: im.base64 });
+          localImages[path] = im.dataUrl;
+          images.push({ src: path, alt: meta.alt, caption: meta.caption, section: meta.section });
+        }
+      });
+      var proj = {
+        id: id, date: date.value, title: t, summary: summary.value.trim(),
+        businessCase: biz.value.replace(/\s+$/, ''),
+        stack: stack.value.split(/[,\n]/).map(function (x) { return x.trim(); }).filter(Boolean).slice(0, 40),
+        findings: fnd.value.replace(/\s+$/, ''), links: links, images: images
+      };
+      var removed = removedSrcs.slice();
+      var isEdit = !!d.id;
+      busy = true;
+      submit.disabled = true;
+      setStatus('Publishing...');
+      try {
+        projects = await commit('projects', (isEdit ? 'Update project: ' : 'Add project: ') + t, function (current) {
+          var next = isEdit && current.some(function (p) { return p.id === id; })
+            ? current.map(function (p) { return p.id === id ? proj : p; })
+            : [proj].concat(current);
+          return { items: next, deletePaths: removed };
+        }, newFiles);
+        projectsLoaded = true;
+        notice = (isEdit ? 'Project updated.' : 'Project published.') + ' The public site shows it in about a minute.';
+        busy = false;
+        location.hash = '#project-' + id;
+      } catch (e) {
+        busy = false;
+        submit.disabled = false;
+        setStatus(explain(e));
+      }
+    });
+
+    composerView.appendChild(form);
+    document.title = (existing ? 'Edit project' : 'New project') + ' | ' + TITLE;
+    hideAll();
+    inProjects = true;
+    composerView.hidden = false;
+  }
+  async function deleteProject(p) {
+    if (busy) return;
+    busy = true;
+    say('Deleting...');
+    refreshProjectViews();
+    try {
+      projects = await commit('projects', 'Delete project: ' + (p.title || p.id), function (current) {
+        var target = findIn(current, p.id);
+        return { items: current.filter(function (x) { return x.id !== p.id; }), deletePaths: target ? target.images.map(function (im) { return im.src; }) : [] };
+      }, []);
+      notice = 'Project deleted. The public site updates in about a minute.';
+    } catch (e) {
+      notice = explain(e);
+    }
+    busy = false;
+    pendingDelete = null;
+    if (location.hash.slice(1) === 'project-' + p.id && !findProject(p.id)) location.hash = '#projects';
+    else { refreshProjectViews(); setStatus(notice); }
   }
 
   /* ---------- owner sign-in ---------- */
@@ -683,13 +1118,13 @@
     ownerView.appendChild(back);
     ownerView.appendChild(el('h1', '', 'Owner sign-in'));
     if (cfg) {
-      ownerView.appendChild(el('p', '', 'You are signed in. Posts are saved to ' + cfg.repo + ' on the ' + cfg.branch + ' branch.'));
+      ownerView.appendChild(el('p', '', 'You are signed in. Posts and projects are saved to ' + cfg.repo + ' on the ' + cfg.branch + ' branch.'));
       var out = el('button', 'btn', 'Sign out');
       out.type = 'button';
       out.addEventListener('click', function () { cfg = null; clearCfg(); notice = ''; location.hash = '#blog'; renderHome(); });
       ownerView.appendChild(out);
     } else {
-      ownerView.appendChild(el('p', '', 'Only the site owner can add, change or delete posts. Sign in with a GitHub access token that can write to this site\'s repository. The token is kept in this browser only and is sent only to GitHub.'));
+      ownerView.appendChild(el('p', '', 'Only the site owner can add, change or delete posts and projects. Sign in with a GitHub access token that can write to this site\'s repository. The token is kept in this browser only and is sent only to GitHub.'));
       var form = el('form', 'editor');
       form.noValidate = true;
       var repo = input('text'); repo.placeholder = 'your-username/your-repository'; repo.autocomplete = 'off'; repo.spellcheck = false;
@@ -738,14 +1173,14 @@
       ownerView.appendChild(det);
     }
     document.title = 'Owner sign-in | ' + TITLE;
-    home.hidden = true; reader.hidden = true; composerView.hidden = true;
+    hideAll(); inProjects = false;
     ownerView.hidden = false;
   }
 
   /* ---------- routing ---------- */
   function showHome(h, scroll) {
     document.title = TITLE;
-    reader.hidden = true; composerView.hidden = true; ownerView.hidden = true;
+    hideAll(); inProjects = false;
     home.hidden = false;
     renderHome();
     if (scroll) {
@@ -757,6 +1192,23 @@
     var h = location.hash.slice(1);
     var p;
     if (h === 'owner') { showOwner(); if (scroll) window.scrollTo(0, 0); return; }
+    if (h === 'projects') { showProjects(); if (scroll) window.scrollTo(0, 0); return; }
+    if (h === 'new-project' || h.indexOf('projectedit-') === 0) {
+      if (!cfg) { location.hash = '#owner'; return; }
+      if (h === 'new-project') { showProjectComposer(null); if (scroll) window.scrollTo(0, 0); return; }
+      p = findProject(h.slice(12));
+      if (p) { showProjectComposer(p); if (scroll) window.scrollTo(0, 0); return; }
+      if (!projectsLoaded) { showProjects(); return; }
+      location.hash = '#projects';
+      return;
+    }
+    if (h.indexOf('project-') === 0) {
+      p = findProject(h.slice(8));
+      if (p) { showProject(p); if (scroll) window.scrollTo(0, 0); return; }
+      if (!projectsLoaded) { showProjects(); return; }
+      location.hash = '#projects';
+      return;
+    }
     if (h === 'new-post' || h.indexOf('edit-') === 0) {
       if (!cfg) { location.hash = '#owner'; return; }
       if (h === 'new-post') { showComposer(null); if (scroll) window.scrollTo(0, 0); return; }
@@ -829,7 +1281,9 @@
   function updateActive() {
     ticking = false;
     var current = null;
-    if (!home.hidden) {
+    if (home.hidden) {
+      if (inProjects) current = 'projects';
+    } else {
       spyIds.forEach(function (id) {
         var s = $(id);
         if (s && s.getBoundingClientRect().top <= 140) current = id;
@@ -847,6 +1301,11 @@
   window.addEventListener('hashchange', function () { pendingDelete = null; route(true); queueActive(); });
   route(false);
 
+  var projectsFetch = fetch('projects.json', { cache: 'no-cache' })
+    .then(function (r) { if (r.status === 404) return []; if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+    .then(function (d) { projects = cleanProjects(d); projectsLoaded = true; })
+    .catch(function () {});
+
   fetch('posts.json', { cache: 'no-cache' })
     .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
     .then(function (d) { posts = clean(d); loaded = true; loadNote.hidden = true; })
@@ -854,5 +1313,6 @@
       loadNote.hidden = false;
       loadNote.textContent = 'The posts could not be loaded. If you opened this file straight from a folder, view the site on GitHub Pages or through a local web server instead.';
     })
+    .then(function () { return projectsFetch; })
     .then(function () { renderHome(); route(false); settleAnchor(); queueActive(); return refreshFromRepo(); });
 })();

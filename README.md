@@ -64,3 +64,21 @@ Anyone can open the Owner sign-in screen, but nothing happens without a token th
 ## Editing the rest of the page
 
 Open `index.html` on GitHub and choose the pencil icon. Change the text and commit. The same goes for `style.css`.
+
+## Projects page
+
+The **Projects** link in the menu opens a dedicated page with one card per project. Each project has a short summary, the business case, the tech stack, the findings, links and pictures.
+
+To add one: sign in with **Owner sign-in** (same token as for the blog), open **Projects**, choose **New project** and fill in:
+
+- **Business case**: who needed it and what problem or decision it was for.
+- **Tech stack**: tools separated by commas. They show as chips.
+- **Findings**: what you found or delivered.
+- **Links**: for example source code or a live dashboard.
+- **Pictures**: screenshots. For each one choose where it appears: under the business case, under the findings, or in a screenshots gallery.
+
+The writing syntax is the same as for blog posts (blank line = new paragraph, `## ` heading, `- ` bullet, `[text](https://address)`).
+
+Publishing saves `projects.json` (and any pictures in `images/`) to your repository in one commit; the public site updates in about a minute. You can edit or delete a project from its card or its page.
+
+Upload the new `projects.json` along with the other files. It contains one clearly marked **Sample** project; delete it once you have added your own.
