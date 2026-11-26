@@ -1,14 +1,24 @@
 [
   {
-    "id": "sample-reporting-automation",
-    "date": "2026-11-22",
-    "title": "Sample: Monthly reporting, automated",
-    "summary": "A template project showing how a finished project reads. Edit or delete it once you have added your own.",
-    "businessCase": "Finance spent two days every month copying figures from three systems into one report.\n\nThe goal was to cut that to minutes and remove copy-and-paste errors.\n\n- Who needed it: the finance team\n- Decision it supports: monthly budget review",
-    "stack": ["SQL", "Python", "Power BI"],
-    "findings": "## Result\n\nThe report now builds itself in under five minutes.\n\n- Manual effort fell from two days to minutes\n- Three recurring data errors were found and fixed at source",
+    "id": "circana-toolkit-ribbon",
+    "date": "2026-11-25",
+    "title": "Circana Toolkit: a custom Excel ribbon for routine data work",
+    "summary": "A custom Excel ribbon tab that puts the team's repetitive data tasks behind single buttons.",
+    "businessCase": "Routine data tasks were spread across separate files, macros and manual steps, which made them slow to run and easy to get wrong.\n\nThe goal was one place inside Excel where anyone on the team can run them the same way, every time.\n\n- Who it is for: analysts doing recurring maintenance and setup work\n- What it replaces: hunting for the right macro or file, and repeating manual steps\n- How it is organised: tools grouped under Maintenance, Logic Setup and Info",
+    "stack": [
+      "Excel VBA",
+      "Custom Excel ribbon",
+      "Automation"
+    ],
+    "findings": "## What it delivers\n\n- A dedicated Circana Toolkit tab with 14 tools, each one click away\n- Maintenance tools for loading, checking and comparing data, and for creating client files\n- A Logic Setup group, plus Info buttons to report an issue, see what is new and read about the toolkit\n- Consistent, repeatable runs instead of one-off manual work",
     "links": [],
-    "images": [],
-    "sample": true
+    "images": [
+      {
+        "src": "images/project-circana-toolkit-ribbon-1.png",
+        "alt": "The Circana Toolkit tab in the Excel ribbon, showing tool buttons grouped under Maintenance, Logic Setup and Info",
+        "caption": "The Circana Toolkit tab in Excel",
+        "section": ""
+      }
+    ]
   }
 ]
