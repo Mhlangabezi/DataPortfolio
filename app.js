@@ -442,7 +442,7 @@
       list.appendChild(item);
     });
   }
-  function renderHome() { renderAdmin(); renderList(); }
+  function renderHome() { renderAdmin(); renderList(); renderHomeProjects(); }
   function refreshViews() {
     renderHome();
     var h = location.hash.slice(1);
@@ -738,6 +738,44 @@
     if (max && list.length > max) box.appendChild(el('span', 'chip more', '+' + (list.length - max)));
     return box;
   }
+  function projectCard(p) {
+    var item = el('div', 'post-item');
+    var a = el('a', 'post-link' + (p.images.length ? ' has-media' : ''));
+    a.href = '#project-' + p.id;
+    if (p.images.length) {
+      var th = el('img', 'thumb');
+      th.src = imgSrc(p.images[0].src);
+      th.alt = '';
+      th.loading = 'lazy';
+      a.appendChild(th);
+    }
+    var body = el('div', 'card-body');
+    var meta = el('div', 'card-meta');
+    meta.appendChild(el('span', 'date', fmt(p.date)));
+    if (p.sample) meta.appendChild(el('span', 'tag', 'Sample'));
+    body.appendChild(meta);
+    body.appendChild(el('h3', '', p.title || 'Untitled project'));
+    var ex = p.summary ? excerpt(p.summary, 170) : excerpt(p.businessCase, 170);
+    if (ex) body.appendChild(el('p', 'ex', ex));
+    if (p.stack.length) body.appendChild(stackChips(p.stack, 4));
+    a.appendChild(body);
+    item.appendChild(a);
+    return item;
+  }
+  function sortedProjects() { return projects.slice().sort(function (x, y) { return x.date < y.date ? 1 : (x.date > y.date ? -1 : 0); }); }
+  function renderHomeProjects() {
+    var box = $('projectPreview');
+    box.textContent = '';
+    if (!projectsLoaded) return;
+    var list3 = sortedProjects().slice(0, 3);
+    if (!list3.length) { box.appendChild(el('p', 'empty', 'Projects will appear here as I finish them.')); return; }
+    var grid = el('div', 'posts projects');
+    list3.forEach(function (p) { grid.appendChild(projectCard(p)); });
+    box.appendChild(grid);
+    var more = el('a', 'btn more-link', projects.length > 3 ? 'See all ' + projects.length + ' projects' : 'Open the projects page');
+    more.href = '#projects';
+    box.appendChild(more);
+  }
   function renderProjects() {
     projectsView.textContent = '';
     var back = el('a', 'back', '← Back to home');
@@ -765,33 +803,13 @@
       projectsView.appendChild(el('p', 'empty', 'The projects could not be loaded. If you opened this file straight from a folder, view the site on GitHub Pages or through a local web server instead.'));
       return;
     }
-    var sorted = projects.slice().sort(function (x, y) { return x.date < y.date ? 1 : (x.date > y.date ? -1 : 0); });
+    var sorted = sortedProjects();
     if (!sorted.length) {
       projectsView.appendChild(el('p', 'empty', cfg ? 'No projects yet. Choose New project to add the first one.' : 'Projects will appear here as I finish them.'));
       return;
     }
     sorted.forEach(function (p) {
-      var item = el('div', 'post-item');
-      var a = el('a', 'post-link' + (p.images.length ? ' has-media' : ''));
-      a.href = '#project-' + p.id;
-      if (p.images.length) {
-        var th = el('img', 'thumb');
-        th.src = imgSrc(p.images[0].src);
-        th.alt = '';
-        th.loading = 'lazy';
-        a.appendChild(th);
-      }
-      var body = el('div', 'card-body');
-      var meta = el('div', 'card-meta');
-      meta.appendChild(el('span', 'date', fmt(p.date)));
-      if (p.sample) meta.appendChild(el('span', 'tag', 'Sample'));
-      body.appendChild(meta);
-      body.appendChild(el('h3', '', p.title || 'Untitled project'));
-      var ex = p.summary ? excerpt(p.summary, 170) : excerpt(p.businessCase, 170);
-      if (ex) body.appendChild(el('p', 'ex', ex));
-      if (p.stack.length) body.appendChild(stackChips(p.stack, 4));
-      a.appendChild(body);
-      item.appendChild(a);
+      var item = projectCard(p);
       if (cfg) item.appendChild(projTools(p));
       grid.appendChild(item);
     });
@@ -1276,7 +1294,7 @@
 
   // Highlight the menu item for the section being read. Sections with no menu item (results, education) highlight nothing.
   var navLinks = Array.prototype.slice.call(document.querySelectorAll('nav a'));
-  var spyIds = ['results', 'work', 'skills', 'tools', 'education', 'blog', 'contact'];
+  var spyIds = ['results', 'work', 'projectsPreview', 'skills', 'tools', 'education', 'blog', 'contact'];
   var ticking = false;
   function updateActive() {
     ticking = false;
@@ -1291,7 +1309,7 @@
       if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) current = 'contact';
     }
     navLinks.forEach(function (a) {
-      if (current && a.getAttribute('href') === '#' + current) a.setAttribute('aria-current', 'true');
+      if (current && a.getAttribute('href') === '#' + (current === 'projectsPreview' ? 'projects' : current)) a.setAttribute('aria-current', 'true');
       else a.removeAttribute('aria-current');
     });
   }

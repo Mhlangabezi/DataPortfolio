@@ -342,3 +342,8 @@ nav a[aria-current="true"] { background: var(--accent); color: var(--accent-ink)
 .reader .psec { display: grid; gap: 16px; padding-top: 22px; border-top: 1px solid var(--line); }
 .reader .psec h2 { font-size: 26px; color: var(--accent); }
 .imgrow select.in { width: 100%; }
+
+/* project pictures: show the whole screenshot, never crop it */
+.projects .thumb { aspect-ratio: auto; height: auto; max-height: 300px; object-fit: contain; background: var(--surface); }
+.more-link { justify-self: start; margin-top: 20px; display: inline-block; }
+#projectPreview { display: grid; }
