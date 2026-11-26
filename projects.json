@@ -7,7 +7,7 @@
     "businessCase": "Routine data tasks were spread across separate files, macros and manual steps, which made them slow to run and easy to get wrong.\n\nThe goal was one place inside Excel where anyone on the team can run them the same way, every time.\n\n- Who it is for: analysts doing recurring maintenance and setup work\n- What it replaces: hunting for the right macro or file, and repeating manual steps\n- How it is organised: tools grouped under Maintenance, Logic Setup and Info",
     "stack": [
       "Excel VBA",
-      "Custom Excel ribbon",
+      "RibbonX (XML)",
       "Automation"
     ],
     "findings": "## What it delivers\n\n- A dedicated Circana Toolkit tab with 14 tools, each one click away\n- Maintenance tools for loading, checking and comparing data, and for creating client files\n- A Logic Setup group, plus Info buttons to report an issue, see what is new and read about the toolkit\n- Consistent, repeatable runs instead of one-off manual work",
