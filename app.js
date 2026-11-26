@@ -772,7 +772,7 @@
     var grid = el('div', 'posts projects');
     list3.forEach(function (p) { grid.appendChild(projectCard(p)); });
     box.appendChild(grid);
-    var more = el('a', 'btn more-link', projects.length > 3 ? 'See all ' + projects.length + ' projects' : 'Open the projects page');
+    var more = el('a', 'btn more-link', projects.length > 3 ? 'See all ' + projects.length + ' projects' : 'Click to Open Projects page');
     more.href = '#projects';
     box.appendChild(more);
   }
